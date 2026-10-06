@@ -35,11 +35,13 @@ export const Route = createFileRoute("/master-data")({
   component: MasterDataPage,
 });
 
+type Form = Record<string, string> & { status: string; departmentId: string; programId: string; code: string };
+
 type Field = {
   key: string;
   label: string;
   type: "text" | "number" | "select";
-  options?: (form: Record<string, string>, d: MasterData, scoped: (k: EntityKind) => Row[]) => { value: string; label: string }[];
+  options?: (form: Form, d: MasterData, scoped: (k: EntityKind) => Row[]) => { value: string; label: string }[];
   emptyText?: string;
   resets?: string[];
   virtual?: boolean;
@@ -240,8 +242,8 @@ function EntityDialog({ kind, row, onClose, onSave }: {
   const { data, scoped } = useIams();
   const meta = ENTITY_META[kind];
   const fields = FIELDS[kind];
-  const [form, setForm] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = { status: row?.status ?? "ACTIVE" };
+  const [form, setForm] = useState<Form>(() => {
+    const init = { status: row?.status ?? "ACTIVE", departmentId: "", programId: "", code: "" } as Form;
     for (const f of fields) init[f.key] = row?.[f.key] !== undefined ? String(row[f.key]) : "";
     if (kind === "subject" && row) init.departmentId = departmentOf("subject", row, data) ?? "";
     if (!row && fields.some((f) => f.key === "departmentId") && scoped("department").length === 1) {
@@ -261,7 +263,7 @@ function EntityDialog({ kind, row, onClose, onSave }: {
   };
 
   const submit = () => {
-    const missing = fields.find((f) => !form[f.key]?.trim());
+    const missing = fields.find((f) => !(form[f.key] ?? "")?.trim());
     if (missing) return setError(`${missing.label} is required.`);
     if (kind === "subject") {
       const code = form.code.trim().toUpperCase();
@@ -274,7 +276,7 @@ function EntityDialog({ kind, row, onClose, onSave }: {
     const out: Row = { ...(row ?? {}), id: row?.id ?? `${kind}-${Date.now()}`, code: row?.code ?? nextCode(data[kind], meta.prefix), name: "", status: form.status as Row["status"] };
     for (const f of fields) {
       if (f.virtual) continue;
-      out[f.key] = f.type === "number" ? Number(form[f.key]) : f.key === "code" ? form[f.key].trim().toUpperCase() : form[f.key].trim();
+      out[f.key] = f.type === "number" ? Number((form[f.key] ?? "")) : f.key === "code" ? (form[f.key] ?? "").trim().toUpperCase() : (form[f.key] ?? "").trim();
     }
     onSave(out);
   };
@@ -294,7 +296,7 @@ function EntityDialog({ kind, row, onClose, onSave }: {
               return (
                 <div key={f.key} className="grid gap-1.5">
                   <Label htmlFor={f.key}>{f.label}</Label>
-                  <Input id={f.key} type={f.type} value={form[f.key]} onChange={(e) => set(f, e.target.value)} />
+                  <Input id={f.key} type={f.type} value={(form[f.key] ?? "")} onChange={(e) => set(f, e.target.value)} />
                 </div>
               );
             }
@@ -303,7 +305,7 @@ function EntityDialog({ kind, row, onClose, onSave }: {
             return (
               <div key={f.key} className="grid gap-1.5">
                 <Label>{f.label}</Label>
-                <Select value={form[f.key]} onValueChange={(v) => set(f, v)} disabled={parentMissing || options.length === 0}>
+                <Select value={(form[f.key] ?? "")} onValueChange={(v) => set(f, v)} disabled={parentMissing || options.length === 0}>
                   <SelectTrigger>
                     <SelectValue placeholder={parentMissing ? "Select a department first" : options.length === 0 ? (f.emptyText ?? "No options available") : `Select ${f.label.toLowerCase()}`} />
                   </SelectTrigger>

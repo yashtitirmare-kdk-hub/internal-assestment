@@ -23,7 +23,16 @@ export interface Row {
   code: string;
   name: string;
   status: Status;
-  [key: string]: string | number;
+  collegeId?: string;
+  departmentId?: string;
+  programId?: string;
+  classId?: string;
+  city?: string;
+  courseType?: string;
+  duration?: number;
+  year?: number;
+  number?: number;
+  [key: string]: string | number | undefined;
 }
 
 export type MasterData = Record<EntityKind, Row[]>;
@@ -105,7 +114,7 @@ export function departmentOf(kind: EntityKind, row: Row, d: MasterData): string 
   const find = (k: EntityKind, id: unknown) => d[k].find((r) => r.id === id);
   switch (kind) {
     case "department": return row.id;
-    case "program": return row.departmentId as string;
+    case "program": return row.departmentId;
     case "class": return find("program", row.programId)?.departmentId as string;
     case "subject": return find("program", row.programId)?.departmentId as string;
     case "section": {
