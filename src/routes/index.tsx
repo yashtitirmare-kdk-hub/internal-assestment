@@ -1,24 +1,46 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
+import { PageHeader } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
+import { useIams } from "@/lib/iams-store";
+import { ENTITY_META, ROLE_LABEL, type EntityKind } from "@/lib/iams-data";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "Dashboard — IAMS Internal Assessment" },
+      { name: "description", content: "Overview of programs, classes, sections and subjects for internal assessment." },
+      { property: "og:title", content: "Dashboard — IAMS Internal Assessment" },
+      { property: "og:description", content: "College internal assessment management at a glance." },
+    ],
+  }),
+  component: Dashboard,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+const STATS: EntityKind[] = ["program", "class", "section", "subject"];
+
+function Dashboard() {
+  const { role, scoped } = useIams();
+  const manages = role === "ADMIN" || role === "HOD";
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
+    <>
+      <PageHeader
+        title={`Welcome back`}
+        description={`${ROLE_LABEL[role]}${role === "ADMIN" ? " · All departments" : " · Computer Applications"}`}
+        actions={manages && <Button asChild variant="outline"><Link to="/master-data">Open Master Data <ArrowRight /></Link></Button>}
       />
-    </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {STATS.map((k) => (
+          <div key={k} className="rounded-lg border bg-card p-5 shadow-card">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{ENTITY_META[k].plural}</div>
+            <div className="mt-2 font-mono text-3xl font-semibold">{scoped(k).length}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{scoped(k).filter((r) => r.status === "ACTIVE").length} active</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 rounded-lg border border-dashed bg-muted/40 p-6 text-sm text-muted-foreground">
+        Faculty, Students, Faculty Assignments, Schemes, Assessments and Reports are coming next. Use the role selector at the top right to preview what each role sees.
+      </div>
+    </>
   );
 }
