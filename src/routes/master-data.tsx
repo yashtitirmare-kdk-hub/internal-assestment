@@ -185,7 +185,7 @@ function MasterDataPage() {
                   <TableCell className="text-right">
                     <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setEditing(r)}><Pencil /></Button>
                     <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => {
-                      if (!canDelete(r)) return toast.error(`${r.name} has linked records`, { description: "Remove or reassign them first, or mark this inactive." });
+                      if (!canDelete(r)) { toast.error(`${r.name} has linked records`, { description: "Remove or reassign them first, or mark this inactive." }); return; }
                       setDeleting(r);
                     }}><Trash2 /></Button>
                   </TableCell>
