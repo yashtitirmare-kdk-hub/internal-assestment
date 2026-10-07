@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export const ALL = "__all";
 
 export function FilterSelect({ value, onChange, placeholder, options, disabled }: {
-  value: string; onChange: (v: string) => void; placeholder: string; options: { value: string; label: string }[]; disabled?: boolean;
+  value: string; onChange: (v: string) => void; placeholder: string; options: { value: string; label: string }[]; disabled?: boolean | undefined;
 }) {
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
