@@ -1,8 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
-  LayoutDashboard, Database, Users, GraduationCap, ClipboardList, UserCheck, Layers,
-  FileCheck2, BarChart3, FileSpreadsheet, ShieldCheck, Settings,
+  LayoutDashboard, Database, Users, GraduationCap, ClipboardList, Layers,
+  FileCheck2, BarChart3, ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
@@ -12,29 +12,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIams } from "@/lib/iams-store";
 import { ROLE_LABEL, type Role } from "@/lib/iams-data";
 
-type Nav = { title: string; icon: typeof Database; to?: "/" | "/master-data"; roles: Role[] };
-const ALL: Role[] = ["ADMIN", "HOD", "CLASS_INCHARGE", "FACULTY"];
+type Nav = { title: string; facultyTitle?: string; icon: typeof Database; to?: "/" | "/master-data" | "/faculty" | "/students"; roles: Role[] };
 const MGMT: Role[] = ["ADMIN", "HOD"];
 
 const NAV: Nav[] = [
-  { title: "Dashboard", icon: LayoutDashboard, to: "/", roles: ALL },
+  { title: "Dashboard", icon: LayoutDashboard, to: "/", roles: ["ADMIN", "HOD", "CLASS_INCHARGE", "FACULTY"] },
   { title: "Master Data", icon: Database, to: "/master-data", roles: MGMT },
-  { title: "Faculty", icon: Users, roles: MGMT },
-  { title: "Students", icon: GraduationCap, roles: [...MGMT, "CLASS_INCHARGE"] },
-  { title: "Faculty Assignments", icon: ClipboardList, roles: MGMT },
-  { title: "Class Incharge", icon: UserCheck, roles: MGMT },
+  { title: "Faculty", icon: Users, to: "/faculty", roles: MGMT },
+  { title: "Students", facultyTitle: "My Students", icon: GraduationCap, to: "/students", roles: [...MGMT, "CLASS_INCHARGE", "FACULTY"] },
+  { title: "Faculty Assignments", facultyTitle: "My Assignments", icon: ClipboardList, roles: [...MGMT, "CLASS_INCHARGE", "FACULTY"] },
   { title: "Schemes", icon: Layers, roles: MGMT },
-  { title: "Assessments", icon: FileCheck2, roles: ALL },
-  { title: "Reports", icon: BarChart3, roles: ALL },
-  { title: "Excel Import/Export", icon: FileSpreadsheet, roles: MGMT },
-  { title: "Audit", icon: ShieldCheck, roles: ["ADMIN"] },
-  { title: "Settings", icon: Settings, roles: ["ADMIN"] },
+  { title: "Assessments", icon: FileCheck2, roles: ["ADMIN", "HOD", "CLASS_INCHARGE", "FACULTY"] },
+  { title: "Reports", icon: BarChart3, roles: ["ADMIN", "HOD", "CLASS_INCHARGE", "FACULTY"] },
+  { title: "Audit", icon: ShieldCheck, roles: MGMT },
 ];
 
 function AppSidebar() {
   const { role } = useIams();
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const items = NAV.filter((n) => n.roles.includes(role));
+  const items = NAV.filter((n) => n.roles.includes(role)).map((n) => ({ ...n, title: role === "FACULTY" && n.facultyTitle ? n.facultyTitle : n.title }));
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-3 py-4">
