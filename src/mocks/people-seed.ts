@@ -39,11 +39,11 @@ export function seedStudents(): Student[] {
       rollNo: String(100 + n),
       enrollmentNo: `EN2026${String(n).padStart(4, "0")}`,
       name,
-      email: `${name.split(" ")[0].toLowerCase()}@student.sxcs.edu.in`,
-      gender: g,
-      sectionId: SECTIONS[i],
+      email: `${name.split(" ")[0]!.toLowerCase()}@student.sxcs.edu.in`,
+      gender: g!,
+      sectionId: SECTIONS[i]!,
       sessionId: "s1",
-      semesterId: SEM[SECTIONS[i]],
+      semesterId: SEM[SECTIONS[i]!]!,
       status: i === 11 ? "INACTIVE" : "ACTIVE",
     };
   });

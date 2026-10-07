@@ -6,7 +6,7 @@ export interface Faculty {
   code: string; // FAC001
   name: string;
   email: string;
-  employeeCode?: string;
+  employeeCode?: string | undefined;
   departmentId: string;
   role: Role;
   status: Status;
@@ -26,9 +26,9 @@ export interface Student {
   rollNo: string;
   enrollmentNo: string;
   name: string;
-  email?: string;
-  phone?: string;
-  gender?: "MALE" | "FEMALE" | "OTHER";
+  email?: string | undefined;
+  phone?: string | undefined;
+  gender?: "MALE" | "FEMALE" | "OTHER" | undefined;
   sectionId: string;
   sessionId: string;
   semesterId: string;

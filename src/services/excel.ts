@@ -18,7 +18,7 @@ export async function downloadTemplate(fileName: string, columns: ImportColumn[]
 export async function readRows(file: File, columns: ImportColumn[]): Promise<Record<string, string>[]> {
   const XLSX = await import("xlsx");
   const wb = XLSX.read(await file.arrayBuffer());
-  const ws = wb.Sheets[wb.SheetNames[0]];
+  const ws = wb.Sheets[wb.SheetNames[0] ?? ""]!;
   const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
   return raw.map((r) => {
     const out: Record<string, string> = {};

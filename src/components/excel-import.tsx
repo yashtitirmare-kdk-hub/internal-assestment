@@ -118,7 +118,7 @@ export function ExcelImportDialog<T>({ title, templateName, columns, validate, o
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: "success" | "error" }) {
+function Stat({ label, value, tone }: { label: string; value: number; tone?: "success" | "error" | undefined }) {
   return (
     <div className="rounded-md border p-2">
       <div className={cn("font-mono text-xl font-semibold", tone === "success" && "text-success", tone === "error" && "text-destructive")}>{value}</div>
