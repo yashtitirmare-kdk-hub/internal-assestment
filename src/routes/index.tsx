@@ -39,7 +39,7 @@ function Dashboard() {
         ))}
       </div>
       <div className="mt-6 rounded-lg border border-dashed bg-muted/40 p-6 text-sm text-muted-foreground">
-        Faculty, Students, Faculty Assignments, Schemes, Assessments and Reports are coming next. Use the role selector at the top right to preview what each role sees.
+        Faculty and Students are ready. Faculty Assignments, Schemes, Assessments, Reports and Audit are not built yet and show as "Soon". Use the role selector at the top right to preview what each role sees.
       </div>
     </>
   );

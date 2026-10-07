@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ALL, Field, FilterSelect } from "@/components/form-bits";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -33,7 +33,6 @@ export const Route = createFileRoute("/faculty")({
 });
 
 const ROLES: Role[] = ["FACULTY", "CLASS_INCHARGE", "HOD", "ADMIN"];
-const ALL = "__all";
 
 function FacultyPage() {
   const { role, faculty, incharge, data, upsertFaculty } = useIams();
@@ -172,20 +171,6 @@ function FacultyPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
-}
-
-export function FilterSelect({ value, onChange, placeholder, options, disabled }: {
-  value: string; onChange: (v: string) => void; placeholder: string; options: { value: string; label: string }[]; disabled?: boolean;
-}) {
-  return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="h-9 w-full sm:w-[170px]"><SelectValue placeholder={placeholder} /></SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ALL}>{placeholder}</SelectItem>
-        {options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-      </SelectContent>
-    </Select>
   );
 }
 
@@ -338,6 +323,3 @@ function FacultyDialog({ row, onClose }: { row: Faculty | null; onClose: () => v
   );
 }
 
-export function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="grid gap-1.5"><Label>{label}</Label>{children}</div>;
-}
