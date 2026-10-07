@@ -8,7 +8,7 @@ export function FilterSelect({ value, onChange, placeholder, options, disabled }
   value: string; onChange: (v: string) => void; placeholder: string; options: { value: string; label: string }[]; disabled?: boolean | undefined;
 }) {
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select value={value} onValueChange={onChange} disabled={!!disabled}>
       <SelectTrigger className="h-9 w-full sm:w-[170px]"><SelectValue placeholder={placeholder} /></SelectTrigger>
       <SelectContent>
         <SelectItem value={ALL}>{placeholder}</SelectItem>

@@ -87,9 +87,10 @@ function StudentsPage() {
   const validate = (raw: Record<string, string>[]): ValidatedRow<Student>[] => {
     const seenRoll = new Set<string>(); const seenEn = new Set(students.map((s) => s.enrollmentNo.toUpperCase()));
     let counter = students as unknown as Row[];
-    return raw.map((r, i) => {
+    return raw.map((r0, i) => {
+      const r = r0 as Record<"rollNo" | "enrollmentNo" | "name" | "section" | "session" | "semester" | "gender" | "email" | "phone", string>;
       const errors: string[] = [];
-      COLUMNS.filter((c) => c.required && !r[c.key]).forEach((c) => errors.push(`${c.header} missing`));
+      COLUMNS.filter((c) => c.required && !r0[c.key]).forEach((c) => errors.push(`${c.header} missing`));
       const s = allowedSections.find((x) => x.code.toUpperCase() === r.section.toUpperCase());
       if (r.section && !s) errors.push(`Section ${r.section} not found${role === "HOD" ? " in your department" : ""}`);
       const ses = data.session.find((x) => x.name === r.session);
@@ -102,7 +103,7 @@ function StudentsPage() {
       if (s && (seenRoll.has(rk) || students.some((x) => x.sectionId === s.id && x.rollNo === r.rollNo))) errors.push("Roll No already used in this section");
       const g = r.gender.toUpperCase();
       if (g && !["MALE", "FEMALE", "OTHER"].includes(g)) errors.push("Gender must be MALE, FEMALE or OTHER");
-      if (errors.length) return { line: i + 2, raw: r, errors };
+      if (errors.length) return { line: i + 2, raw: r0, errors };
       seenEn.add(en); seenRoll.add(rk);
       const code = nextCode(counter, "STU");
       const value: Student = {
@@ -110,7 +111,7 @@ function StudentsPage() {
         gender: (g || undefined) as Student["gender"], sectionId: s!.id, sessionId: ses!.id, semesterId: sem!.id, status: "ACTIVE",
       };
       counter = [...counter, value as unknown as Row];
-      return { line: i + 2, raw: r, errors, value };
+      return { line: i + 2, raw: r0, errors, value };
     });
   };
 
