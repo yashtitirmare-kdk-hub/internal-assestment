@@ -35,7 +35,7 @@ export const Route = createFileRoute("/faculty")({
 const ROLES: Role[] = ["FACULTY", "CLASS_INCHARGE", "HOD", "ADMIN"];
 
 function FacultyPage() {
-  const { role, faculty, incharge, data, upsertFaculty } = useIams();
+  const { role, faculty, incharge, data, saveFaculty } = useIams();
   const isAdmin = role === "ADMIN";
   const canManage = role === "ADMIN" || role === "HOD";
   const [q, setQ] = useState("");
@@ -162,7 +162,8 @@ function FacultyPage() {
             <AlertDialogAction onClick={() => {
               if (!toggling) return;
               const status = toggling.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-              upsertFaculty({ ...toggling, status });
+              const err = saveFaculty({ ...toggling, status });
+              if (err) { toast.error(err); return; }
               toast.success(`${toggling.name} ${status === "ACTIVE" ? "activated" : "deactivated"}`);
             }}>
               {toggling?.status === "ACTIVE" ? "Deactivate" : "Activate"}
@@ -175,7 +176,7 @@ function FacultyPage() {
 }
 
 function FacultyDialog({ row, onClose }: { row: Faculty | null; onClose: () => void }) {
-  const { role, data, faculty, incharge, upsertFaculty, setInchargeFor, sectionDept } = useIams();
+  const { role, data, faculty, incharge, saveFaculty, sectionDept } = useIams();
   const isAdmin = role === "ADMIN";
   const [f, setF] = useState({
     name: row?.name ?? "", email: row?.email ?? "", employeeCode: row?.employeeCode ?? "",
@@ -199,22 +200,12 @@ function FacultyDialog({ row, onClose }: { row: Faculty | null; onClose: () => v
   };
 
   const submit = () => {
-    if (!f.name.trim()) return setError("Name is required.");
-    if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return setError("Enter a valid email address.");
-    if (!f.departmentId) return setError("Department is required.");
-    const email = f.email.trim().toLowerCase();
-    if (faculty.some((x) => x.id !== row?.id && x.email.toLowerCase() === email)) return setError(`${email} is already used by another faculty member.`);
-    const emp = f.employeeCode.trim().toUpperCase();
-    if (emp && faculty.some((x) => x.id !== row?.id && x.employeeCode?.toUpperCase() === emp)) return setError(`Employee code ${emp} is already in use.`);
-    if (f.role !== "CLASS_INCHARGE" && sections.length) return setError("Remove all class incharge sections before changing the role.");
-    if (f.status === "INACTIVE" && sections.length) return setError("Remove all class incharge sections before deactivating.");
     const id = row?.id ?? `f-${Date.now()}`;
-    const emailChanged = row ? row.email.toLowerCase() !== email : true;
-    upsertFaculty({
-      id, code, name: f.name.trim(), email, employeeCode: emp || undefined, departmentId: f.departmentId,
-      role: f.role, status: f.status as Faculty["status"], emailVerified: emailChanged ? false : row!.emailVerified,
-    });
-    setInchargeFor(id, f.role === "CLASS_INCHARGE" ? sections : []);
+    const err = saveFaculty({
+      id, code, name: f.name, email: f.email, employeeCode: f.employeeCode || undefined, departmentId: f.departmentId,
+      role: f.role, status: f.status as Faculty["status"], emailVerified: row?.emailVerified ?? false,
+    }, f.role === "CLASS_INCHARGE" || sections.length ? sections : []);
+    if (err) return setError(err);
     toast.success(`Faculty ${row ? "updated" : "created"}`, { description: `${code} - ${f.name.trim()}` });
     onClose();
   };

@@ -7,12 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { downloadTemplate, readRows, type ImportColumn } from "@/services/excel";
 
-export interface ValidatedRow<T> {
-  line: number;
-  raw: Record<string, string>;
-  value?: T;
-  errors: string[];
-}
+import type { ValidatedRow } from "@/services/people-rules";
+export type { ValidatedRow };
 
 const STEPS = ["Download Template", "Upload", "Validate", "Preview", "Confirm"];
 

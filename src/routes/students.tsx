@@ -5,7 +5,8 @@ import { Eye, FileSpreadsheet, Pencil, Plus, Search } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
 import { ALL, Field, FilterSelect } from "@/components/form-bits";
-import { ExcelImportDialog, type ValidatedRow } from "@/components/excel-import";
+import { ExcelImportDialog } from "@/components/excel-import";
+import { validateStudentImport } from "@/services/people-rules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,9 @@ const COLUMNS: ImportColumn[] = [
   { key: "rollNo", header: "Roll No", required: true, example: "101" },
   { key: "enrollmentNo", header: "Enrollment No", required: true, example: "EN20260101" },
   { key: "name", header: "Student Name", required: true, example: "Aarav Shah" },
+  { key: "department", header: "Department Code", required: true, example: "DEP001" },
+  { key: "program", header: "Program Code", required: true, example: "PROG001" },
+  { key: "class", header: "Class Code", required: true, example: "CLS001" },
   { key: "section", header: "Section Code", required: true, example: "SEC001" },
   { key: "session", header: "Session", required: true, example: "2026-2027" },
   { key: "semester", header: "Semester No", required: true, example: "1" },
@@ -42,7 +46,7 @@ const COLUMNS: ImportColumn[] = [
 ];
 
 function StudentsPage() {
-  const { role, data, students, upsertStudents, sectionDept, scoped, mySectionIds } = useIams();
+  const { role, data, students, saveStudents, sectionDept, visibleSectionIds } = useIams();
   const canManage = role === "ADMIN" || role === "HOD";
   const [q, setQ] = useState("");
   const [f, setF] = useState({ dept: ALL, prog: ALL, cls: ALL, sec: ALL, ses: ALL });
@@ -50,12 +54,7 @@ function StudentsPage() {
   const [viewing, setViewing] = useState<Student | null>(null);
   const [importing, setImporting] = useState(false);
 
-  const allowedSections = useMemo(() => {
-    if (role === "ADMIN") return data.section;
-    if (role === "HOD") return scoped("section");
-    if (role === "CLASS_INCHARGE") return data.section.filter((s) => mySectionIds.includes(s.id));
-    return [];
-  }, [role, data, scoped, mySectionIds]);
+  const allowedSections = useMemo(() => data.section.filter((s) => visibleSectionIds.includes(s.id)), [data, visibleSectionIds]);
   const allowedIds = new Set(allowedSections.map((s) => s.id));
 
   const sec = (id: string) => data.section.find((s) => s.id === id);
@@ -84,36 +83,11 @@ function StudentsPage() {
     return <><PageHeader title="My Students" /><EmptyState text="My Students will list students from your subject assignments once Faculty Assignments is built. Not available yet." /></>;
   }
 
-  const validate = (raw: Record<string, string>[]): ValidatedRow<Student>[] => {
-    const seenRoll = new Set<string>(); const seenEn = new Set(students.map((s) => s.enrollmentNo.toUpperCase()));
-    let counter = students as unknown as Row[];
-    return raw.map((r0, i) => {
-      const r = r0 as Record<"rollNo" | "enrollmentNo" | "name" | "section" | "session" | "semester" | "gender" | "email" | "phone", string>;
-      const errors: string[] = [];
-      COLUMNS.filter((c) => c.required && !r0[c.key]).forEach((c) => errors.push(`${c.header} missing`));
-      const s = allowedSections.find((x) => x.code.toUpperCase() === r.section.toUpperCase());
-      if (r.section && !s) errors.push(`Section ${r.section} not found${role === "HOD" ? " in your department" : ""}`);
-      const ses = data.session.find((x) => x.name === r.session);
-      if (r.session && !ses) errors.push(`Session ${r.session} not found`);
-      const sem = data.semester.find((x) => String(x.number) === r.semester);
-      if (r.semester && !sem) errors.push(`Semester ${r.semester} not found`);
-      const en = r.enrollmentNo.toUpperCase();
-      if (en && seenEn.has(en)) errors.push("Enrollment No already exists");
-      const rk = `${r.section}|${r.rollNo}`;
-      if (s && (seenRoll.has(rk) || students.some((x) => x.sectionId === s.id && x.rollNo === r.rollNo))) errors.push("Roll No already used in this section");
-      const g = r.gender.toUpperCase();
-      if (g && !["MALE", "FEMALE", "OTHER"].includes(g)) errors.push("Gender must be MALE, FEMALE or OTHER");
-      if (errors.length) return { line: i + 2, raw: r0, errors };
-      seenEn.add(en); seenRoll.add(rk);
-      const code = nextCode(counter, "STU");
-      const value: Student = {
-        id: `st-${Date.now()}-${i}`, code, rollNo: r.rollNo, enrollmentNo: en, name: r.name, email: r.email || undefined, phone: r.phone || undefined,
-        gender: (g || undefined) as Student["gender"], sectionId: s!.id, sessionId: ses!.id, semesterId: sem!.id, status: "ACTIVE",
-      };
-      counter = [...counter, value as unknown as Row];
-      return { line: i + 2, raw: r0, errors, value };
-    });
-  };
+  const validate = (raw: Record<string, string>[]) => validateStudentImport(raw, {
+    students, allowedSectionIds: visibleSectionIds, data, role,
+    required: COLUMNS.filter((c) => c.required).map((c) => c.key),
+    headers: Object.fromEntries(COLUMNS.map((c) => [c.key, c.header])),
+  });
 
   const setFilter = (k: keyof typeof f, v: string) => setF((p) => {
     const n = { ...p, [k]: v };
@@ -197,7 +171,11 @@ function StudentsPage() {
       {importing && (
         <ExcelImportDialog title="Bulk import students" templateName="students-template.xlsx" columns={COLUMNS} validate={validate}
           onClose={() => setImporting(false)}
-          onConfirm={(v) => { upsertStudents(v); toast.success(`${v.length} students imported`); setImporting(false); }} />
+          onConfirm={(v) => {
+            const err = saveStudents(v);
+            if (err) { toast.error("Import cancelled — nothing was added", { description: err }); return; }
+            toast.success(`${v.length} students imported`); setImporting(false);
+          }} />
       )}
       {viewing && (() => {
         const { s, c, p } = path(viewing.sectionId);
@@ -225,7 +203,7 @@ function StudentsPage() {
 }
 
 function StudentDialog({ row, sections, onClose }: { row: Student | null; sections: Row[]; onClose: () => void }) {
-  const { data, students, upsertStudents } = useIams();
+  const { data, students, saveStudents } = useIams();
   const [f, setF] = useState({
     name: row?.name ?? "", rollNo: row?.rollNo ?? "", enrollmentNo: row?.enrollmentNo ?? "", email: row?.email ?? "", phone: row?.phone ?? "",
     gender: row?.gender ?? "", sectionId: row?.sectionId ?? "", sessionId: row?.sessionId ?? (data.session.find((s) => s.status === "ACTIVE")?.id ?? ""),
@@ -237,16 +215,12 @@ function StudentDialog({ row, sections, onClose }: { row: Student | null; sectio
   const label = (s: Row) => `${data.class.find((c) => c.id === s.classId)?.name} → ${s.name}`;
 
   const submit = () => {
-    if (!f.name.trim() || !f.rollNo.trim() || !f.enrollmentNo.trim()) return setError("Name, roll no and enrollment no are required.");
-    if (!f.sectionId || !f.sessionId || !f.semesterId) return setError("Section, session and semester are required.");
-    const en = f.enrollmentNo.trim().toUpperCase();
-    if (students.some((s) => s.id !== row?.id && s.enrollmentNo.toUpperCase() === en)) return setError(`Enrollment no ${en} already exists.`);
-    if (students.some((s) => s.id !== row?.id && s.sectionId === f.sectionId && s.rollNo === f.rollNo.trim())) return setError(`Roll no ${f.rollNo} is already used in this section.`);
-    upsertStudents([{
-      id: row?.id ?? `st-${Date.now()}`, code, name: f.name.trim(), rollNo: f.rollNo.trim(), enrollmentNo: en,
+    const err = saveStudents([{
+      id: row?.id ?? `st-${Date.now()}`, code, name: f.name.trim(), rollNo: f.rollNo.trim(), enrollmentNo: f.enrollmentNo.trim().toUpperCase(),
       email: f.email.trim() || undefined, phone: f.phone.trim() || undefined, gender: (f.gender || undefined) as Student["gender"],
       sectionId: f.sectionId, sessionId: f.sessionId, semesterId: f.semesterId, status: f.status as Student["status"],
     }]);
+    if (err) return setError(err.replace(/^[^:]*: /, ""));
     toast.success(`Student ${row ? "updated" : "created"}`, { description: `${code} - ${f.name.trim()}` });
     onClose();
   };
