@@ -130,7 +130,7 @@ function Pick({ value, onChange, placeholder, options, disabled }: {
   value: string; onChange: (v: string) => void; placeholder: string; options: { value: string; label: string }[]; disabled?: boolean | undefined;
 }) {
   return (
-    <Select value={value || undefined} onValueChange={onChange} disabled={!!disabled}>
+    <Select {...(value ? { value } : {})} onValueChange={onChange} disabled={!!disabled}>
       <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
       <SelectContent>{options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
     </Select>
