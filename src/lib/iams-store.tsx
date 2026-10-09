@@ -2,9 +2,10 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import {
   departmentOf, HOD_DEPARTMENT_ID, makeSeed, type EntityKind, type MasterData, type Role, type Row,
 } from "./iams-data";
-import type { Faculty, InchargeAssignment, Student } from "@/types/people";
+import type { Faculty, FacultyAssignment, InchargeAssignment, Student } from "@/types/people";
+import { checkAssignment } from "@/services/assignment-rules";
 import { checkFaculty, checkStudent, normaliseFaculty, sectionDepartment, visibleSectionIds } from "@/services/people-rules";
-import { DEMO_CLASS_INCHARGE_ID, seedFaculty, seedIncharge, seedStudents } from "@/mocks/people-seed";
+import { DEMO_CLASS_INCHARGE_ID, DEMO_FACULTY_ID, seedAssignments, seedFaculty, seedIncharge, seedStudents } from "@/mocks/people-seed";
 
 interface Store {
   role: Role;
@@ -28,6 +29,11 @@ interface Store {
   sectionDept: (sectionId: string) => string | undefined;
   /** Sections the demo user is responsible for (CLASS_INCHARGE). */
   mySectionIds: string[];
+  assignments: FacultyAssignment[];
+  saveAssignment: (a: FacultyAssignment) => string | null;
+  removeAssignment: (id: string) => void;
+  /** Faculty id of the demo user for non-management roles. */
+  myFacultyId: string | null;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -43,6 +49,7 @@ export function IamsProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<MasterData>(() => makeSeed());
   const [faculty, setFaculty] = useState<Faculty[]>(() => seedFaculty());
   const [incharge, setIncharge] = useState<InchargeAssignment[]>(() => seedIncharge());
+  const [assignments, setAssignments] = useState<FacultyAssignment[]>(() => seedAssignments());
   const [students, setStudents] = useState<Student[]>(() => seedStudents());
 
   const value = useMemo<Store>(() => {
@@ -89,8 +96,17 @@ export function IamsProvider({ children }: { children: ReactNode }) {
       visibleSectionIds: visible,
       sectionDept,
       mySectionIds,
+      assignments,
+      saveAssignment: (a) => {
+        const err = checkAssignment(role, a, { data, faculty, assignments });
+        if (err) return err;
+        setAssignments((l) => upsertList(l, [a]));
+        return null;
+      },
+      removeAssignment: (id) => { if (role === "ADMIN" || role === "HOD") setAssignments((l) => l.filter((x) => x.id !== id)); },
+      myFacultyId: role === "FACULTY" ? DEMO_FACULTY_ID : role === "CLASS_INCHARGE" ? DEMO_CLASS_INCHARGE_ID : null,
     };
-  }, [role, data, faculty, incharge, students]);
+  }, [role, data, faculty, incharge, students, assignments]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
