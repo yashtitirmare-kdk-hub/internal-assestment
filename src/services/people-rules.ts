@@ -36,8 +36,8 @@ export function checkFaculty(
   if (actor === "HOD") {
     if (next.departmentId !== HOD_DEPARTMENT_ID) return "You can only manage faculty in your own department.";
     if (prev && prev.departmentId !== HOD_DEPARTMENT_ID) return "You can only manage faculty in your own department.";
-    if (!HOD_ASSIGNABLE_ROLES.includes(next.role)) return "Head of Department can only assign Faculty or Class Incharge.";
     if (prev && !HOD_ASSIGNABLE_ROLES.includes(prev.role)) return "You cannot edit this account.";
+    if (!HOD_ASSIGNABLE_ROLES.includes(next.role)) return "Head of Department can only assign Faculty or Class Incharge.";
   }
   if (!next.name.trim()) return "Name is required.";
   if (!/^\S+@\S+\.\S+$/.test(next.email.trim())) return "Enter a valid email address.";
