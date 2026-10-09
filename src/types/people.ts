@@ -34,3 +34,13 @@ export interface Student {
   semesterId: string;
   status: Status;
 }
+
+/** Faculty → Class → Subject → Sections → Academic Session. */
+export interface FacultyAssignment {
+  id: string;
+  facultyId: string;
+  classId: string;
+  subjectId: string;
+  sectionIds: string[];
+  sessionId: string;
+}

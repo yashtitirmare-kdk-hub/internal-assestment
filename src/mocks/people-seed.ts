@@ -48,3 +48,9 @@ export function seedStudents(): Student[] {
     };
   });
 }
+
+export const seedAssignments = (): import("@/types/people").FacultyAssignment[] => [
+  { id: "fa1", facultyId: "f4", classId: "k3", subjectId: "u3", sectionIds: ["x3", "x4"], sessionId: "s1" },
+  { id: "fa2", facultyId: "f3", classId: "k1", subjectId: "u1", sectionIds: ["x1"], sessionId: "s1" },
+  { id: "fa3", facultyId: "f5", classId: "k4", subjectId: "u5", sectionIds: ["x5"], sessionId: "s1" },
+];
