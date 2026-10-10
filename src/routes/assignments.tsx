@@ -130,7 +130,7 @@ function Pick({ value, onChange, placeholder, options, disabled }: {
   value: string; onChange: (v: string) => void; placeholder: string; options: { value: string; label: string }[]; disabled?: boolean | undefined;
 }) {
   return (
-    <Select {...(value ? { value } : {})} onValueChange={onChange} disabled={!!disabled}>
+    <Select key={value || "__empty"} {...(value ? { value } : {})} onValueChange={onChange} disabled={!!disabled}>
       <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
       <SelectContent>{options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
     </Select>
@@ -160,6 +160,12 @@ function AssignmentDialog({ initial, onClose }: { initial: FacultyAssignment | n
     return o ? faculty.find((f) => f.id === o.facultyId)?.name : undefined;
   };
 
+  // Drop sections that are already taught by someone else for this subject + session.
+  const prune = (next: FacultyAssignment) => ({
+    ...next,
+    sectionIds: next.sectionIds.filter((id) => !assignments.some((x) => x.id !== next.id && x.subjectId === next.subjectId && x.sessionId === next.sessionId && x.sectionIds.includes(id))),
+  });
+
   const save = () => {
     const err = saveAssignment(a);
     if (err) { setError(err); return; }
@@ -182,7 +188,7 @@ function AssignmentDialog({ initial, onClose }: { initial: FacultyAssignment | n
           <Field label="Subject">
             {cls && subOpts.length === 0 ? <p className="text-sm text-muted-foreground">No active subjects for this class's program.</p> :
               <Pick value={a.subjectId} placeholder={cls ? "Select subject" : "Select class first"} options={subOpts} disabled={!cls}
-                onChange={(v) => { setError(null); setA({ ...a, subjectId: v, sectionIds: a.sectionIds.filter(() => true) }); }} />}
+                onChange={(v) => { setError(null); setA(prune({ ...a, subjectId: v })); }} />}
           </Field>
           <Field label="Sections">
             {!cls ? <p className="text-sm text-muted-foreground">Select class first.</p> : sections.length === 0 ?
@@ -204,7 +210,7 @@ function AssignmentDialog({ initial, onClose }: { initial: FacultyAssignment | n
           </Field>
           <Field label="Academic Session"><Pick value={a.sessionId} placeholder="Select academic session"
             options={data.session.filter((s) => s.status === "ACTIVE").map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }))}
-            onChange={(v) => { setError(null); setA({ ...a, sessionId: v }); }} /></Field>
+            onChange={(v) => { setError(null); setA(prune({ ...a, sessionId: v })); }} /></Field>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
