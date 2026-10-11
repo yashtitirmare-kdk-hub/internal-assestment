@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIams } from "@/lib/iams-store";
 import { ROLE_LABEL, type Role } from "@/lib/iams-data";
 
-type Nav = { title: string; facultyTitle?: string; icon: typeof Database; to?: "/" | "/master-data" | "/faculty" | "/students" | "/assignments"; roles: Role[] };
+type Nav = { title: string; facultyTitle?: string; icon: typeof Database; to?: "/" | "/master-data" | "/faculty" | "/students" | "/assignments" | "/schemes"; roles: Role[] };
 const MGMT: Role[] = ["ADMIN", "HOD"];
 
 const NAV: Nav[] = [
@@ -21,7 +21,7 @@ const NAV: Nav[] = [
   { title: "Faculty", icon: Users, to: "/faculty", roles: MGMT },
   { title: "Students", facultyTitle: "My Students", icon: GraduationCap, to: "/students", roles: [...MGMT, "CLASS_INCHARGE", "FACULTY"] },
   { title: "Faculty Assignments", facultyTitle: "My Assignments", icon: ClipboardList, to: "/assignments", roles: [...MGMT, "CLASS_INCHARGE", "FACULTY"] },
-  { title: "Schemes", icon: Layers, roles: MGMT },
+  { title: "Schemes", icon: Layers, to: "/schemes", roles: MGMT },
   { title: "Assessments", icon: FileCheck2, roles: ["ADMIN", "HOD", "CLASS_INCHARGE", "FACULTY"] },
   { title: "Reports", icon: BarChart3, roles: ["ADMIN", "HOD", "CLASS_INCHARGE", "FACULTY"] },
   { title: "Audit", icon: ShieldCheck, roles: MGMT },

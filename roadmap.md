@@ -2,7 +2,7 @@
 - [x] Faculty Management + section-wise Class Incharge
 - [x] Student Management + bulk Excel import (template → upload → validate → preview → confirm)
 - [x] Faculty Assignments (Faculty → Class → Subject → Sections → Session)
-- [ ] Schemes (configurable components)
+- [x] Schemes (configurable components)
 - [ ] Assessment Workspace + status workflow
 - [ ] HOD Verification
 - [ ] Reports

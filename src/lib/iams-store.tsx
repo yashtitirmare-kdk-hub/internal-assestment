@@ -5,6 +5,9 @@ import {
 import type { Faculty, FacultyAssignment, InchargeAssignment, Student } from "@/types/people";
 import { checkAssignment } from "@/services/assignment-rules";
 import { checkFaculty, checkStudent, normaliseFaculty, sectionDepartment, visibleSectionIds } from "@/services/people-rules";
+import type { SchemeStatus, SchemeVersion } from "@/types/scheme";
+import { checkSchemeAccess, nextSchemeCode, validateScheme } from "@/services/scheme-rules";
+import { seedSchemes } from "@/mocks/scheme-seed";
 import { DEMO_CLASS_INCHARGE_ID, DEMO_FACULTY_ID, seedAssignments, seedFaculty, seedIncharge, seedStudents } from "@/mocks/people-seed";
 
 interface Store {
@@ -34,6 +37,16 @@ interface Store {
   removeAssignment: (id: string) => void;
   /** Faculty id of the demo user for non-management roles. */
   myFacultyId: string | null;
+  /** Every version of every scheme. */
+  schemes: SchemeVersion[];
+  /** Creates Version 1 as a draft with a generated SCH code. Returns error or the new version. */
+  createScheme: (s: SchemeVersion) => string | SchemeVersion;
+  /** Only DRAFT versions can be edited; used versions are kept unchanged. */
+  updateScheme: (s: SchemeVersion) => string | null;
+  /** Copies the latest version of `code` into a new DRAFT version. */
+  newSchemeVersion: (code: string) => string | SchemeVersion;
+  /** Activating a version makes the other versions of the same scheme inactive. */
+  setSchemeStatus: (id: string, status: Exclude<SchemeStatus, "DRAFT">) => string | null;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -51,6 +64,8 @@ export function IamsProvider({ children }: { children: ReactNode }) {
   const [incharge, setIncharge] = useState<InchargeAssignment[]>(() => seedIncharge());
   const [assignments, setAssignments] = useState<FacultyAssignment[]>(() => seedAssignments());
   const [students, setStudents] = useState<Student[]>(() => seedStudents());
+
+  const [schemes, setSchemes] = useState<SchemeVersion[]>(() => seedSchemes());
 
   const value = useMemo<Store>(() => {
     const sectionDept = (id: string) => sectionDepartment(data, id);
@@ -104,9 +119,56 @@ export function IamsProvider({ children }: { children: ReactNode }) {
         return null;
       },
       removeAssignment: (id) => { if (role === "ADMIN" || role === "HOD") setAssignments((l) => l.filter((x) => x.id !== id)); },
+      schemes,
+      createScheme: (sc) => {
+        const err = checkSchemeAccess(role, sc);
+        if (err) return err;
+        if (Object.keys(validateScheme(sc, data)).length) return "Fix the highlighted fields.";
+        const created: SchemeVersion = { ...sc, id: `sv-${Date.now()}`, code: nextSchemeCode(schemes), version: 1, status: "DRAFT" };
+        setSchemes((l) => [...l, created]);
+        return created;
+      },
+      updateScheme: (sc) => {
+        const prev = schemes.find((x) => x.id === sc.id);
+        if (!prev) return "Scheme not found.";
+        const err = checkSchemeAccess(role, prev) ?? checkSchemeAccess(role, sc);
+        if (err) return err;
+        if (prev.status !== "DRAFT") return `Version ${prev.version} is already in use. Create a new version to change it.`;
+        if (Object.keys(validateScheme(sc, data)).length) return "Fix the highlighted fields.";
+        setSchemes((l) => l.map((x) => (x.id === sc.id ? { ...sc, code: prev.code, version: prev.version, status: prev.status } : x)));
+        return null;
+      },
+      newSchemeVersion: (code) => {
+        const versions = schemes.filter((x) => x.code === code);
+        const latest = versions.reduce<SchemeVersion | undefined>((m, x) => (!m || x.version > m.version ? x : m), undefined);
+        if (!latest) return "Scheme not found.";
+        const err = checkSchemeAccess(role, latest);
+        if (err) return err;
+        if (versions.some((x) => x.status === "DRAFT")) return "A draft version already exists. Edit it instead.";
+        const stamp = Date.now();
+        const v: SchemeVersion = {
+          ...latest, id: `sv-${stamp}`, version: latest.version + 1, status: "DRAFT", note: undefined,
+          components: latest.components.map((c, i) => ({ ...c, id: `c-${stamp}-${i}` })),
+        };
+        setSchemes((l) => [...l, v]);
+        return v;
+      },
+      setSchemeStatus: (id, status) => {
+        const sc = schemes.find((x) => x.id === id);
+        if (!sc) return "Scheme not found.";
+        const err = checkSchemeAccess(role, sc);
+        if (err) return err;
+        if (status === "ACTIVE" && Object.keys(validateScheme(sc, data)).length) return "This version has invalid settings. Fix it before activating.";
+        setSchemes((l) => l.map((x) => {
+          if (x.id === id) return { ...x, status, note: undefined };
+          if (status === "ACTIVE" && x.code === sc.code && x.status === "ACTIVE") return { ...x, status: "INACTIVE", note: `Replaced by Version ${sc.version}` };
+          return x;
+        }));
+        return null;
+      },
       myFacultyId: role === "FACULTY" ? DEMO_FACULTY_ID : role === "CLASS_INCHARGE" ? DEMO_CLASS_INCHARGE_ID : null,
     };
-  }, [role, data, faculty, incharge, students, assignments]);
+  }, [role, data, faculty, incharge, students, assignments, schemes]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
